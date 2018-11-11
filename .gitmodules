@@ -1,0 +1,9 @@
+[submodule "lib/restclient-cpp"]
+	path = lib/restclient-cpp
+	url = https://github.com/mrtazz/restclient-cpp.git
+[submodule "lib/Catch2"]
+	path = lib/Catch2
+	url = https://github.com/catchorg/Catch2.git
+[submodule "lib/json"]
+	path = lib/json
+	url = https://github.com/nlohmann/json.git
