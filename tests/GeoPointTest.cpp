@@ -1,7 +1,7 @@
 #include <string>
 #include <vector>
 #include "Geo/ParseGeoPoint.h"
-#include <catch/catch.hpp>
+#include <catch2/catch.hpp>
 
 using namespace std;
 using namespace parsecloud;

@@ -5,9 +5,7 @@
 #include <string>
 #include <vector>
 #include <nlohmann/json.hpp>
-#include <catch/catch.hpp>
-#include <restclient-cpp/restclient.h>
-#include <restclient-cpp/connection.h>
+#include <catch2/catch.hpp>
 
 using namespace std;
 using namespace parsecloud;

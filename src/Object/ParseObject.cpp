@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <spdlog/spdlog.h>
+#include <boost/any.hpp>
 
 #include "Object/ParseObject.h"
 #include "Object/ParseRelation.h"
@@ -162,6 +163,7 @@ NS_PC_BEGIN
     }
 
     void ParseObject::saveInBackgroundWithCallback(BooleanResultCallback callback) {
+        spdlog::debug("debug\n");
         for (auto &kv : this->addedRelationData) {
             this->localData[kv.first] = this->generateRelationObjectsByArray(kv.second, true);
         }
@@ -188,6 +190,7 @@ NS_PC_BEGIN
                                [&](Json const root,
                                                        PCError const &error) {
                                                        if (error.domain.length() == 0) {
+
                                                            this->objectId = root["objectId"];
                                                            this->createdAt = root["createdAt"];
                                                            if (root.find("sessionToken") != root.end()) {

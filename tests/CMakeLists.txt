@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD 11)
     ACLTest
     )
 
-add_definitions( -DAPPID="myAppId" -DAPPKEY="restAPIKey" -DSERVER_URL="http://localhost:1337/parse")
+add_definitions( -DAPPID="abc" -DAPPKEY="abc" -DSERVER_URL="http://localhost:1337/parse")
   foreach(test ${TESTS})
     if (${CMAKE_CXX_COMPILER_ID} MATCHES GNU)
       set_source_files_properties(${test}.cpp
@@ -24,7 +24,9 @@ add_definitions( -DAPPID="myAppId" -DAPPKEY="restAPIKey" -DSERVER_URL="http://lo
 
     add_executable(ParseCloud-${test}  TestMain.cpp ${test}.cpp)
     add_dependencies(ParseCloud-${test} parsecloud)
-    target_link_libraries(ParseCloud-${test} ${LINK_INTERFACE_LIBRARIES} parsecloud boost_system )
+    target_link_libraries(ParseCloud-${test}
+#            ${LINK_INTERFACE_LIBRARIES}
+            debug parsecloud )
 
     set_target_properties(ParseCloud-${test}
       PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ParseCloud_BINARY_DIR}/bin)

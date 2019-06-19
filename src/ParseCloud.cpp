@@ -1,16 +1,19 @@
+#include <utility>
+
+#include <utility>
+
 #include <string>
 
 #include "ParseCloud.h"
 #include "Request/ParsePaasClient.h"
 #include "File/UploaderManager.h"
-
 NS_PC_BEGIN
 
 //TODO init url
-    void ParseCloud::setApplicationConfig(std::string url, std::string applicationId, std::string clientKey) {
-    ParsePaasClient::sharedInstance()->baseURL=url;
-  ParsePaasClient::sharedInstance()->applicationId = applicationId;
-  ParsePaasClient::sharedInstance()->clientKey = clientKey;
+    void ParseCloud::setApplicationConfig(const std::string& url, std::string applicationId, std::string clientKey) {
+    ParsePaasClient::sharedInstance()->setBaseUrl(url);
+  ParsePaasClient::sharedInstance()->applicationId = std::move(applicationId);
+  ParsePaasClient::sharedInstance()->clientKey = std::move(clientKey);
 }
 
 std::string ParseCloud::getApplicationId() {

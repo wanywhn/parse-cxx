@@ -3,7 +3,7 @@
 #include "ParseCloud.h"
 #include "ACL/ParseACL.h"
 #include "Object/ParseObject.h"
-#include <catch/catch.hpp>
+#include <catch2/catch.hpp>
 
 using namespace std;
 using namespace parsecloud;

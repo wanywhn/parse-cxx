@@ -5,9 +5,9 @@
 #include <fstream>
 #include <thread>
 #include <exception>
-#include <restclient-cpp/connection.h>
-#include <restclient-cpp/restclient.h>
+
 #define SPDLOG_TRACE_ON
+
 #include <spdlog/spdlog.h>
 #include <set>
 #include <Request/ParsePaasClient.h>
@@ -36,12 +36,16 @@ NS_PC_BEGIN
             productionMode(true),
             _headerMap(),
             _responseBody() {
-  clientImpl=new RestClient::Connection("");
-  clientImpl->FollowRedirects(true,50);
+    }
+    void ParsePaasClient::setBaseUrl(const std::string &b) {
+        if(clientImpl){
+            delete clientImpl;
+        }
+        clientImpl=new http_client(b);
+        this->baseURL=b;
     }
 
     ParsePaasClient::~ParsePaasClient() {
-        RestClient::disable();
         delete clientImpl;
 
     }
@@ -69,7 +73,7 @@ NS_PC_BEGIN
 //    void ParsePaasClient::useServer(std::string const &baseURL) {
 //        this->baseURL = baseURL;
 //        RestClient::init();
-        //TODO Change ID
+    //TODO Change ID
 //        this->applicationIdField = "X-LC-Id";
 //        this->apiKeyField = "X-LC-Key";
 //        this->sessionTokenField = "X-LC-Session";
@@ -84,7 +88,7 @@ NS_PC_BEGIN
     void ParsePaasClient::updateHeaders(std::string const &content_type) {
 
         std::unordered_map<std::string, std::string> _map;
-        _map[this->apiKeyField]=this->clientKey;
+        _map[this->apiKeyField] = this->clientKey;
         _map[this->applicationIdField] = this->applicationId;
 //        _map["Accept"] = "application/json";
         _map["Content-Type"] = content_type;
@@ -120,62 +124,68 @@ NS_PC_BEGIN
         map["method"] = method;
         map["path"] = myPath;
     }
-    std::string UrlEncode(const std::string& str)
-    {
-        static std::set<char> sep{'{','[','}',']'};
-        std::ostringstream oss;
-       for(auto c:str) {
-           if(c=='"'){
-               oss<<"%22";
-           }else{
-               oss<<c;
-           }
-       }
-        return oss.str();
-    }
-    std::string ParsePaasClient::createRequestUrl(std::string const &path,
-                                                  map const &parameters,
-                                                  bool isQuery) {
-        auto
-        base_uri = StringUtils::string_format("/%s",
-                                              path);
 
-        auto res=base_uri;
-        if (isQuery) {
-            res+="?";
-            //TODO is it needed to use libcurl url api
-            for (auto it = parameters.begin(); it != parameters.end(); ++it) {
-                if (it == parameters.begin()) {
-                    res +=UrlEncode( StringUtils::string_format("%s=%s", it.key(), it.value().dump()));
-                } else  {
-                    res += UrlEncode(StringUtils::string_format("&%s=%s", it.key(), it.value().dump()));
-                }
+    std::string UrlEncode(const std::string &str) {
+        static std::set<char> sep{'{', '[', '}', ']'};
+        std::ostringstream oss;
+        for (auto c:str) {
+            if (c == '"') {
+                oss << "%22";
+            } else {
+                oss << c;
             }
         }
-
-        RestClient::HeaderFields headers;
-        for (auto &it : _headerMap) {
-            headers[it.first] = it.second;
-        }
-        clientImpl->SetHeaders(headers);
-
-        return res;
+        return oss.str();
     }
 
-    void ParsePaasClient::processResponse(const RestClient::Response &response,
-                                          IdResultCallback callback) {
+    http_request ParsePaasClient::createRequestUrl(std::string const &path,
+                                                   map const &parameters,
+                                                   bool isQuery) {
+        uri_builder builder(path);
+//        assert(isQuery != parameters.empty());
 
-
-        //!!FIXME and error recv
-        try {
-            Json str=Json::parse(response.body, nullptr,false);
-
-            PCError error = ParseErrorUtils::errorFromJSON(str);
-            callback(str, error);
-        } catch (std::invalid_argument &e) {
-            spdlog::critical("Error with:{}",e.what());
-
+        for (auto it = parameters.begin(); it != parameters.end(); ++it) {
+            builder.append_query(it.key(), it.value().dump());
         }
+
+        http_request request;
+        request.set_request_uri(builder.to_uri());
+        spdlog::debug("request URI:"+request.request_uri().to_string());
+
+        auto &headers = request.headers();
+        for (auto &it : _headerMap) {
+            headers.add(it.first, it.second);
+        }
+
+
+        return request;
+    }
+
+    void ParsePaasClient::processResponse(const pplx::task<web::http::http_response> &response,
+                                          const IdResultCallback &callback) {
+
+
+        //!!FIXME use one json lib
+        response.then([](http_response response1) {
+            if (response1.status_code() != web::http::status_codes::OK) {
+                spdlog::critical("Error response:{}", response1.status_code());
+                std::cout<<response1.to_string();
+            }
+
+            return response1.extract_json();
+        }).then([callback](web::json::value jvalue) {
+            if (jvalue.is_null()) {
+                spdlog::critical("Error parse null json");
+            }
+            try {
+                Json str = Json::parse(jvalue.serialize(), nullptr, false);
+                PCError error = ParseErrorUtils::errorFromJSON(str);
+                callback(str, error);
+            } catch (std::invalid_argument &e) {
+                spdlog::critical("Error with:{}", e.what());
+            }
+
+        });
 
     }
 
@@ -184,15 +194,13 @@ NS_PC_BEGIN
                                     IdResultCallback callback) {
         std::lock_guard<std::recursive_mutex> locker(_lock);
 
-        try {
-            this->updateHeaders();
-            auto requestUrl = this->createRequestUrl(path, parameters, true);
-            auto response = this->clientImpl->get(this->baseURL+requestUrl);
+        this->updateHeaders();
+        auto requestUrl = this->createRequestUrl(path, parameters, true);
+        requestUrl.set_method("GET");
 
-            processResponse(response, callback);
-        } catch (std::exception &e) {
-spdlog::critical("Error with:{}",e.what());
-        }
+        auto tex = this->clientImpl->request(requestUrl);
+
+        processResponse(tex, callback);
     }
 
     void ParsePaasClient::putObject(std::string const &path,
@@ -206,37 +214,42 @@ spdlog::critical("Error with:{}",e.what());
 
             ParsePaasClient::map myParameters;
             auto requestUrl = this->createRequestUrl(path, myParameters, false);
+            requestUrl.set_method("PUT");
 
-            auto jsonstr=parameters.dump();
-            jsonstr=jsonstr=="null"?"":jsonstr;
-            auto response = this->clientImpl->put(this->baseURL+requestUrl,jsonstr);
+            auto jsonstr = parameters.dump();
+            jsonstr = jsonstr == "null" ? "" : jsonstr;
+            requestUrl.set_body(jsonstr);
+            auto tex = this->clientImpl->request(requestUrl);
 
-            processResponse(response, callback);
+            processResponse(tex, callback);
         } catch (std::exception &e) {
-spdlog::critical("Error with:{}",e.what());
+            spdlog::critical("Error with:{}", e.what());
         }
     }
 
     void ParsePaasClient::postObject(std::string const &path, map const &parameters, IdResultCallback callback,
-                                         std::string const &content_type) {
+                                     std::string const &content_type) {
         std::lock_guard<std::recursive_mutex> locker(_lock);
 
         try {
             this->updateHeaders(content_type);
             ParsePaasClient::map myParameters;
             auto requestUrl = this->createRequestUrl(path, myParameters, false);
+            requestUrl.set_method("POST");
 
-            auto jsonstr=parameters.dump();
-            jsonstr=jsonstr=="null"?"":jsonstr;
-            auto response = this->clientImpl->post(this->baseURL+requestUrl, jsonstr);
+            auto jsonstr = parameters.dump();
+            jsonstr = jsonstr == "null" ? "" : jsonstr;
+            requestUrl.set_body(jsonstr);
+            auto tex = this->clientImpl->request(requestUrl);
 
 
-            processResponse(response, std::move(callback));
+            processResponse(tex, callback);
         } catch (std::exception &e) {
 
-spdlog::critical("Error with:{}",e.what());
+            spdlog::critical("Error with:{}", e.what());
         }
     }
+
     void ParsePaasClient::postFile(std::string const &path, const std::string &data, IdResultCallback callback,
                                    const std::string &content_type) {
         std::lock_guard<std::recursive_mutex> locker(_lock);
@@ -244,10 +257,12 @@ spdlog::critical("Error with:{}",e.what());
             this->updateHeaders(content_type);
             ParsePaasClient::map myParameters;
             auto requestUrl = this->createRequestUrl(path, myParameters, false);
+            requestUrl.set_method("POST");
+            requestUrl.set_body(data);
 
 
-            auto response = this->clientImpl->post(this->baseURL + requestUrl, data);
-            processResponse(response,callback);
+            auto tex = this->clientImpl->request(requestUrl);
+            processResponse(tex, callback);
 
         } catch (std::exception &e) {
 
@@ -265,9 +280,10 @@ spdlog::critical("Error with:{}",e.what());
         try {
             this->updateHeaders();
             auto requestUrl = this->createRequestUrl(path, parameters, false);
-            auto response = this->clientImpl->del(this->baseURL+requestUrl);
+            requestUrl.set_method("DELETE");
+            auto tex = this->clientImpl->request(requestUrl);
 
-            processResponse(response, callback);
+            processResponse(tex, callback);
         } catch (std::exception &e) {
 
         }
@@ -302,6 +318,7 @@ spdlog::critical("Error with:{}",e.what());
 
     void ParsePaasClient::fetchFileDataIntoPathWithUrl(std::string const &path,
                                                        std::string const &url) {
+        /*
         if (url.length() > 0) {
             try {
                 RestClient::Connection client(url);
@@ -312,15 +329,17 @@ spdlog::critical("Error with:{}",e.what());
                 ofs << response.body;
                 ofs.close();
             } catch (std::exception &e) {
-spdlog::critical("Error with:{}",e.what());
+                spdlog::critical("Error with:{}", e.what());
             }
         }
+         */
     }
 
     void ParsePaasClient::logOut() {
         ParsePaasClient::currentUser = nullptr;
         ParsePaasClient::_headerMap.clear();
     }
+
 
 
 NS_PC_END

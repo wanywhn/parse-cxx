@@ -3,7 +3,8 @@
 #include "ParseCloud.h"
 #include "Object/ParseObject.h"
 #include "Object/ParseRelation.h"
-#include <catch/catch.hpp>
+#include <catch2/catch.hpp>
+#include <spdlog/spdlog.h>
 
 using namespace std;
 using namespace parsecloud;
@@ -53,13 +54,15 @@ TEST_CASE("SaveObjectInBackgroudWithCallback Test", "[Object]") {
     ParseCloud::setApplicationConfig(SERVER_URL, APPID,
                                      APPKEY);
     ParseObject *object = ParseObject::objectForClassName("Post");
-    object->setObjectForKey("myname", "name");
+    object->setObjectForKey("mname", "name");
     object->setObjectForKey(22, "age");
 
     object->saveInBackgroundWithCallback([&](bool const &succeeded, PCError const &error) {
         CHECK(succeeded);
+        CHECK(!object->objectId.empty());
+        spdlog::info("obj id{}",object->objectId);
     });
-    object->deleteInBackground();
+//    object->deleteInBackground();
 
     object->release();
 }
@@ -68,7 +71,7 @@ TEST_CASE("UpdateObject Test", "[Object]") {
     ParseCloud::setApplicationConfig(SERVER_URL, APPID,
                                      APPKEY);
     ParseObject *object = ParseObject::objectForClassName("Post");
-    object->objectId = "D9MgXhJm58";
+    object->objectId = "v6MwUx0P4r";
     object->fetch();
     object->setObjectForKey("male", "gender");
     object->setObjectForKey("yahoo", "name");

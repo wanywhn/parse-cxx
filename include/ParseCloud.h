@@ -16,7 +16,7 @@ public:
    * \~english \param applicationId The applicaiton id for your Parse Cloud application.
    * \~english \param clientKey The client key for your Parse Cloud application.
    */
-  static void setApplicationConfig(std::string url, std::string applicationId, std::string clientKey);
+  static void setApplicationConfig(const std::string& url, std::string applicationId, std::string clientKey);
 
   /**
    * \~english  get Application Id

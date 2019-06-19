@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <boost/any.hpp>
 
 #include "ParseConstants.h"
 #include "Utils/ParsePlatformMacros.h"

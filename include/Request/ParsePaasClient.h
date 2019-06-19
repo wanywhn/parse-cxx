@@ -6,15 +6,20 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <mutex>
+
+#include <cpprest/http_client.h>
 #include "Utils/ParsePlatformMacros.h"
 #include "Utils/ParseStringUtils.h"
 #include "ParseConstants.h"
 #include "Object/ParseObject.h"
 #include "User/ParseUser.h"
 #include "ACL/ParseACL.h"
-#include <restclient-cpp/restclient.h>
-#include <restclient-cpp/connection.h>
 
+
+using http_client=web::http::client::http_client;
+using uri_builder=web::uri_builder;
+using http_request=web::http::http_request;
+using http_response=web::http::http_response;
 NS_PC_BEGIN
 
 
@@ -22,7 +27,8 @@ class ParsePaasClient {
 public:
   typedef Json map;
   typedef std::unordered_map<std::string, std::string> stringMap;
-  RestClient::Connection *clientImpl;
+//  RestClient::Connection *clientImpl;
+  http_client *clientImpl{nullptr};
   std::string applicationId;
   std::string clientKey;
   std::string baseURL;
@@ -43,6 +49,7 @@ private:
   stringMap _headerMap;
 public:
     void logOut();
+    void setBaseUrl(const std::string &b);
 
 private:
     bool _requestProcessed;
@@ -52,8 +59,8 @@ private:
   ParsePaasClient();
   void updateHeaders(std::string const &content_type="application/json");
   void addHeaderMap(stringMap && headerMap);
-  void processResponse(const RestClient::Response &response,
-                       IdResultCallback callback);
+  void processResponse(const pplx::task<web::http::http_response>& response,
+                       const IdResultCallback& callback);
 
 public:
   ~ParsePaasClient();
@@ -140,9 +147,9 @@ public:
  * \~english \param isQuery
  * \~english \return
  */
-  std::string createRequestUrl(std::string const &path,
-                              map const &parameters,
-                              bool isQuery);
+        http_request createRequestUrl(std::string const &path,
+                                      map const &parameters,
+                                      bool isQuery);
 
 //  void uploadFileToQiniuWithBodyAndCallback(std::string const & body,
 //                                            BooleanResultCallback callback);
