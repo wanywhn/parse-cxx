@@ -9,11 +9,13 @@ set(CMAKE_CXX_STANDARD 11)
 if (${CMAKE_CXX_COMPILER_ID} MATCHES GNU)
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -ftemplate-dempth=256")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -ftemplate-depth=256")
 endif()
 
 option(BUILD_CppTests "Only build TestCpp sample" ON)
 
+add_definitions( -D_NO_ASYNCRTIMP )
+add_compile_definitions(_NO_ASYNCRTIMP)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 
@@ -22,7 +24,7 @@ conan_basic_setup(TARGETS)
 #find_package(Threads)
 
 # find OpenSSL, Threads, Boost, cppnetlib, jsoncpp
-#set(Boost_USE_STATIC_LIBS ON)
+# set(Boost_USE_STATIC_LIBS ON)
 #set(Boost_USE_MULTI_THREAD ON)
 
 #find_package(Boost 1.69.0 REQUIRED

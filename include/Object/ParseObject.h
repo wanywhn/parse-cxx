@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <pplx/pplxtasks.h>
 
 #include "ParseConstants.h"
 #include "Utils/ParsePlatformMacros.h"
@@ -39,7 +40,7 @@ protected:
    *
    * \~english \return
    */
-  std::string myObjectPath();
+  virtual std::string myObjectPath();
 
 
 public:
@@ -204,57 +205,35 @@ public:
    * \~english Saves the Object asynchronously.
    *
    */
-  void saveInBackground();
+  pplx::task<PCError> saveInBackground();
 
-  /**
-   * \~english Saves the Object asynchronously and executes the given callback block.
-   *
-   * \~english \param callback The callback to execute. The callback should have the following argument sianature: (bool const&, Error const&)
-   *
-   */
-  void saveInBackgroundWithCallback(BooleanResultCallback callback);
-
-  /**
-   * \~english Saves a collection of objects all at once.
-   *
-   * \~english \param objects
-   */
-  static void saveAllInBackground(std::vector<ParseObject*> objects);
-
-  /**
+    /**
    *  Saves a collection of objects all at once asynchronously and calls a callback when done.
    *
    * \~english \param objects
    * \~english \param callback
    */
-  static void saveAllInBackgroundWithCallback(std::vector<ParseObject*> objects,
-                                              BooleanResultCallback callback);
+  static pplx::task<std::vector<PCError>> saveAllInBackgroundWithCallback(std::vector<ParseObject *> objects);
 
   /**
    * \~english  Fetches the Object with the current data from the server.
    *
    */
-  void fetch();
+  pplx::task<PCError> fetch();
 
   /**
    *  \~english Fetches the Object with the current data and specified keys from the server and sets an error if it occurs.
    *
    * \~english \param keys
    */
-  void fetchWithKeys(std::vector<std::string> keys);
+  pplx::task<PCError> fetchWithKeys(std::vector<std::string> keys);
 
-  /**
-   * \~english Deletes the Object.
-   *
-   */
-  void deleteInBackground();
-
-  /**
-   * \~english delet the Object and execute the given callback.
-   *
-   * \~english \param callback
-   */
-  void deleteInBackgroundWithCallback(BooleanResultCallback callback);
+    /**
+     * \~english delet the Object and execute the given callback.
+     *
+     * \~english \param callback
+     */
+  pplx::task<PCError> deleteInBackgroundWithCallback();
 
   /**
    * \~english check if the object has valid objectId

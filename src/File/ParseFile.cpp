@@ -102,10 +102,11 @@ void ParseFile::deleteInBackground() {
     Json parameters;
 
     ParsePaasClient::sharedInstance()->
-        deleteObject(ParseFile::objectPath(this->objectId),
-                     parameters,
-                     [&](Json const & root, PCError const & error) {
-                     });
+        deleteObject(ParseFile::objectPath(this->objectId),parameters)
+        .then([](Json jvalue){
+
+        });
+
   }
 }
 

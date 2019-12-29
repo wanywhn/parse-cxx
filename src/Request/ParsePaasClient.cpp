@@ -161,26 +161,24 @@ NS_PC_BEGIN
         return request;
     }
 
-    void ParsePaasClient::processResponse(const pplx::task<web::http::http_response> &response,
-                                          const IdResultCallback &callback) {
+    pplx::task<Json> ParsePaasClient::processResponse(const pplx::task<web::http::http_response> &response,
+                                          web::http::status_code expectCode) {
 
-
-        //!!FIXME use one json lib
-        response.then([](http_response response1) {
-            if (response1.status_code() != web::http::status_codes::OK) {
-                spdlog::critical("Error response:{}", response1.status_code());
+        return response.then([expectCode](http_response response1) {
+            if (response1.status_code() != expectCode) {
+                spdlog::critical("Error response:{}, expect {}", response1.status_code(),expectCode);
                 std::cout<<response1.to_string();
             }
 
             return response1.extract_json();
-        }).then([callback](web::json::value jvalue) {
+        }).then([](web::json::value jvalue) {
             if (jvalue.is_null()) {
                 spdlog::critical("Error parse null json");
             }
             try {
                 Json str = Json::parse(jvalue.serialize(), nullptr, false);
-                PCError error = ParseErrorUtils::errorFromJSON(str);
-                callback(str, error);
+                return str;
+                // PCError error = ParseErrorUtils::errorFromJSON(str);
             } catch (std::invalid_argument &e) {
                 spdlog::critical("Error with:{}", e.what());
             }
@@ -189,9 +187,9 @@ NS_PC_BEGIN
 
     }
 
-    void ParsePaasClient::getObject(std::string const &path,
+    pplx::task<Json> ParsePaasClient::getObject(std::string const &path,
                                     map const &parameters,
-                                    IdResultCallback callback) {
+                                    web::http::status_code expectCode){
         std::lock_guard<std::recursive_mutex> locker(_lock);
 
         this->updateHeaders();
@@ -200,13 +198,14 @@ NS_PC_BEGIN
 
         auto tex = this->clientImpl->request(requestUrl);
 
-        processResponse(tex, callback);
+        return processResponse(tex, expectCode);
     }
 
-    void ParsePaasClient::putObject(std::string const &path,
+    pplx::task<Json> ParsePaasClient::putObject(std::string const &path,
                                     map const &parameters,
                                     std::string const &sessionToken,
-                                    IdResultCallback callback) {
+                                    web::http::status_code expectCode
+                                    ) {
         std::lock_guard<std::recursive_mutex> locker(_lock);
 
         try {
@@ -221,14 +220,16 @@ NS_PC_BEGIN
             requestUrl.set_body(jsonstr);
             auto tex = this->clientImpl->request(requestUrl);
 
-            processResponse(tex, callback);
+            return processResponse(tex,expectCode);
         } catch (std::exception &e) {
             spdlog::critical("Error with:{}", e.what());
         }
     }
 
-    void ParsePaasClient::postObject(std::string const &path, map const &parameters, IdResultCallback callback,
-                                     std::string const &content_type) {
+    pplx::task<Json> ParsePaasClient::postObject(std::string const &path, map const &parameters,
+                                     web::http::status_code expectCode,
+                                    std::string const &content_type 
+                                     ) {
         std::lock_guard<std::recursive_mutex> locker(_lock);
 
         try {
@@ -243,15 +244,17 @@ NS_PC_BEGIN
             auto tex = this->clientImpl->request(requestUrl);
 
 
-            processResponse(tex, callback);
+            return processResponse(tex,expectCode);
         } catch (std::exception &e) {
 
             spdlog::critical("Error with:{}", e.what());
         }
     }
 
-    void ParsePaasClient::postFile(std::string const &path, const std::string &data, IdResultCallback callback,
-                                   const std::string &content_type) {
+    pplx::task<Json> ParsePaasClient::postFile(std::string const &path, const std::string &data,
+                                   const std::string &content_type,
+                                    web::http::status_code expectCode
+                                   ) {
         std::lock_guard<std::recursive_mutex> locker(_lock);
         try {
             this->updateHeaders(content_type);
@@ -262,7 +265,7 @@ NS_PC_BEGIN
 
 
             auto tex = this->clientImpl->request(requestUrl);
-            processResponse(tex, callback);
+            return processResponse(tex,expectCode);
 
         } catch (std::exception &e) {
 
@@ -272,9 +275,10 @@ NS_PC_BEGIN
         }
     }
 
-    void ParsePaasClient::deleteObject(std::string const &path,
+    pplx::task<Json> ParsePaasClient::deleteObject(std::string const &path,
                                        map const &parameters,
-                                       IdResultCallback callback) {
+                                       web::http::status_code expectCode
+                                       ) {
         std::lock_guard<std::recursive_mutex> locker(_lock);
 
         try {
@@ -283,7 +287,7 @@ NS_PC_BEGIN
             requestUrl.set_method("DELETE");
             auto tex = this->clientImpl->request(requestUrl);
 
-            processResponse(tex, callback);
+            return processResponse(tex,expectCode);
         } catch (std::exception &e) {
 
         }

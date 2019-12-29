@@ -1,8 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <catch/catch.hpp>
-#include <spdlog/spdlog.h>
+#include <catch2/catch.hpp>
 #include "ParseCloud.h"
 #include "Object/ParseObject.h"
 #include "Query/ParseQuery.h"

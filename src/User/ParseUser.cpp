@@ -17,15 +17,7 @@ NS_PC_BEGIN
     }
 
     ParseUser *ParseUser::currentUser() {
-        ParseUser *user = ParsePaasClient::sharedInstance()->currentUser;
-        if (user != nullptr) {
-            return user;
-        } else {
-            user = ParseUser::user();
-            ParsePaasClient::sharedInstance()->currentUser = user;
-
-            return user;
-        }
+        return ParsePaasClient::sharedInstance()->currentUser;
     }
 
     bool ParseUser::isAuthenticated() {
@@ -49,12 +41,13 @@ NS_PC_BEGIN
         parameters["email"] = email;
         ParsePaasClient::sharedInstance()->
                 postObject("verificationEmailRequest",
-                           parameters, [&](Json const &root, PCError const &error) {
-                                    callback(error.domain.length() == 0, error);
-                                });
+                           parameters,web::http::status_codes::OK)
+                           .then([](Json root){
+
+                           });
     }
 
-    void ParseUser::signUp(BooleanResultCallback callback) {
+    pplx::task<PCError> ParseUser::signUp() {
         if (!this->isAuthenticated() &&
             this->username.length() > 0 &&
             this->password.length() > 0) {
@@ -65,14 +58,10 @@ NS_PC_BEGIN
                 this->setObjectForKey(this->email, "email");
             }
 
-            this->saveInBackgroundWithCallback([&](bool const &succeeded, PCError const &error) {
-                if (succeeded) {
-                    this->sessionToken = this->localData["sessionToken"];
-                    ParsePaasClient::sharedInstance()->currentUser = this;
-                } else {
-                    std::cout << error.code << ":" << error.domain << std::endl;
-                }
-                callback(succeeded,error);
+            return this->saveInBackground().then([this](PCError error){
+                this->sessionToken = this->localData["sessionToken"];
+                ParsePaasClient::sharedInstance()->currentUser=this;
+                return error;
             });
         }
     }
@@ -90,18 +79,19 @@ NS_PC_BEGIN
             ParsePaasClient::sharedInstance()->
                     putObject(path,
                               parameters,
-                              this->sessionToken,
-                              [&](Json const &root, PCError const &error) {
-                                  callback(root, error);
+                              this->sessionToken)
+                              .then([](Json root){
+
+
                               });
         } else {
             if (!this->isAuthenticated()) {
                 Json root;
-                PCError error(kErrorDomain,SessionMissing);
+                PCError error(kErrorDomain, SessionMissing);
                 callback(root, error);
             } else if (!(oldPassword.length() > 0 && newPassword.length() > 0)) {
                 Json root;
-                PCError error(kErrorDomain,PasswordMissing);
+                PCError error(kErrorDomain, PasswordMissing);
                 callback(root, error);
             }
         }
@@ -120,19 +110,19 @@ NS_PC_BEGIN
             user->password = password;
             ParsePaasClient::sharedInstance()->
                     postObject(path,
-                               parameters,
-                               [&](Json const &root, PCError const &error) {
-                                                       if (error.domain.length() == 0) {
-                                                           user->objectId = root["objectId"];
-                                                           user->username = root["username"];
-                                                           user->sessionToken = root["sessionToken"];
-                                                           user->email = root["email"];
+                               parameters)
+                               .then([&user](Json root){
 
-                                                           ParsePaasClient::sharedInstance()->currentUser = user;
-                                                       } else {
-                                                           user = nullptr;
-                                                       }
-                                                   });
+
+
+                                       user->objectId = root["objectId"];
+                                       user->username = root["username"];
+                                       user->sessionToken = root["sessionToken"];
+                                       user->email = root["email"];
+
+                                       ParsePaasClient::sharedInstance()->currentUser = user;
+
+                               });
 
             return user;
         }
@@ -150,15 +140,10 @@ NS_PC_BEGIN
         parameters["email"] = email;
 
         ParsePaasClient::sharedInstance()->
-                postObject(path,
-                           parameters,
-                           [&](Json const &root, PCError const &error) {
-                                               // TODO if error return error mesg
-                                               if (!error.domain.empty()) {
-                                                   spdlog::critical("requestPasswordResetForEmailError:{}", error.domain);
-                                               }
-                                               callback(root.dump(), error);
-                                           } );
+                        postObject(path,
+                                   parameters, web::http::status_codes::OK)
+                .then([](Json root) {
+                });
     }
 
     ParseQuery *ParseUser::query() {

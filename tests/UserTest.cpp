@@ -20,13 +20,21 @@ TEST_CASE("ParseUser SingUp", "[SingUp]") {
     user->password = "123456";
     user->email = "myname@example.com";
 
-    user->signUp(parsecloud::BooleanResultCallback());
+    user->signUp()
+            .then([](PCError error) {
+                CHECK(error.code == 0);
+            }).then([user]() {
+                CHECK(user->isAuthenticated());
+            }).then([user]() {
+                user->deleteInBackgroundWithCallback()
+                        .then([](PCError error) {
+                            CHECK(error.code == 0);
+                        }).get();
+            }).then([user]() {
+                ParseUser::logOut();
+                user->release();
+            }).get();
 
-    CHECK(user->isAuthenticated());
-    user->deleteInBackground();
-
-    ParseUser::logOut();
-    user->release();
 
 }
 
@@ -37,13 +45,15 @@ TEST_CASE("ParseUser Login", "[Login]") {
     user->username = "myname";
     user->password = "123456";
     user->email = "myname@example.com";
-    user->signUp([](bool const & successed,PCError const & error){
-       REQUIRE(successed) ;
+    user->signUp()
+    .then([](PCError error){
+        CHECK(error.code == 0);
+        ParseUser::logOut();
+
     });
 
-    ParseUser::logOut();
 
-    ParseUser::loginWithUsernameAndPassword("myname", "123456");
+    CHECK(ParseUser::loginWithUsernameAndPassword("myname", "123456") != nullptr);
 
     REQUIRE (ParseUser::currentUser() != nullptr);
 
@@ -62,10 +72,7 @@ TEST_CASE("ParseUser UpdatePassowrd", "[Password]") {
     user->username = "myname";
     user->password = "123456";
     user->email = "myname@example.com";
-    user->signUp([](const bool &successed,PCError const error){
-        REQUIRE(successed );
-        REQUIRE(error.domain.empty());
-    });
+    user->signUp();
 
     user->updatePasswordWithCallback(
             "123456", "654321", [&](
@@ -97,13 +104,13 @@ TEST_CASE("RequestPasswordResetForEmail", "[Password]") {
     user->username = "myname";
     user->password = "123456";
     user->email = "myname@example.com";
-    user->signUp(parsecloud::BooleanResultCallback());
+    user->signUp();
 
     REQUIRE (ParseUser::currentUser() != nullptr);
 
     CHECK (ParseUser::currentUser()->isAuthenticated());
 
-    ParseUser::requestPasswordResetForEmail("myname@example.com", [](std::string const &str, const PCError &error){
+    ParseUser::requestPasswordResetForEmail("myname@example.com", [](std::string const &str, const PCError &error) {
         REQUIRE(error.domain.empty());
     });
     user->deleteInBackground();

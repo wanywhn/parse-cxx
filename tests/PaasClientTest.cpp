@@ -40,6 +40,7 @@ TEST_CASE("Get Test","[GET]"){
       {
         CHECK(root["objectId"]=="D9MgXhJm58");
       }
-  });
+  },
+  web::http::status_codes::OK);
 }
 

@@ -24,7 +24,7 @@ TEST_CASE("File SaveFile Test", "[File]") {
 }
 
 TEST_CASE("File FetchFile Test", "[File]") {
-    ParseCloud::setApplicationConfig(std::__cxx11::string(), APPID, APPKEY);
+    ParseCloud::setApplicationConfig(SERVER_URL, APPID, APPKEY);
     ParseFile *file = ParseFile::fileWithUrl("http://localhost:1337/parse/files/myAppId/8835d4d42d0c11a83c05fdc16d01fff8_1.png");
     std::string path("/home/tender/Desktop/2.png");
     file->fetchFileDataIntoPath(path);

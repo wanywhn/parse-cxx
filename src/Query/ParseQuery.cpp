@@ -194,7 +194,7 @@ NS_PC_BEGIN
 
     void ParseQuery::whereKeyNearGeoPoint(std::string key, ParseGeoPoint *geoPoint) {
         Json dict;
-        dict["$nearSphere"] =geoPoint->toJson();
+        dict["$nearSphere"] = geoPoint->toJson();
         this->addWhereItemForKey(dict, key);
     }
 
@@ -292,33 +292,33 @@ NS_PC_BEGIN
         this->assembleParameters();
 
         ParsePaasClient::sharedInstance()->
-                getObject(path, this->parameters, [&](Json const &root, PCError const &error) {
-            if (error.domain.length() == 0) {
-                Json results = root["results"];
-                for (auto jsonValue : results) {
-                    ParseObject *object = ParseObject::objectForClassName(this->className);
+                        getObject(path, this->parameters)
+                .then([this](Json root) {
+                    std::vector<ParseObject *> objects;
+                    Json results = root["results"];
+                    for (auto jsonValue : results) {
+                        ParseObject *object = ParseObject::objectForClassName(this->className);
 
-                    for (auto objIt = jsonValue.begin(); objIt != jsonValue.end(); ++objIt) {
-                        std::string key = objIt.key();
+                        for (auto objIt = jsonValue.begin(); objIt != jsonValue.end(); ++objIt) {
+                            std::string key = objIt.key();
 
-                        if (key == "objectId") {
-                            object->objectId = objIt.value();
-                        } else if (key == "createdAt") {
-                            object->createdAt = objIt.value();
-                        } else if (key == "updatedAt") {
-                            object->updatedAt = objIt.value();
+                            if (key == "objectId") {
+                                object->objectId = objIt.value();
+                            } else if (key == "createdAt") {
+                                object->createdAt = objIt.value();
+                            } else if (key == "updatedAt") {
+                                object->updatedAt = objIt.value();
+                            }
                         }
+
+                        object->localData = jsonValue;
+                        object->localData.erase("objectId");
+                        object->localData.erase("createdAt");
+                        object->localData.erase("updatedAt");
+
+                        objects.push_back(object);
                     }
-
-                    object->localData = jsonValue;
-                    object->localData.erase("objectId");
-                    object->localData.erase("createdAt");
-                    object->localData.erase("updatedAt");
-
-                    objects.push_back(object);
-                }
-            }
-        });
+                });
 
         return objects;
     }
@@ -340,18 +340,14 @@ NS_PC_BEGIN
         this->parameters["count"] = 1;
 
         ParsePaasClient::sharedInstance()->
-                getObject(path, this->parameters, [&](Json const &root, PCError const &error) {
-            if (error.domain.length() == 0) {
-                //TODO FIXME no count
-                int count = root["count"];
-                callback(count, error);
-            } else {
-                callback(-1, error);
-            }
-        });
+                        getObject(path, this->parameters)
+                .then([](Json root) {
+                    //TODO FIXME no count
+                    int count = root["count"];
+
+
+                });
     }
-
-
 
 
     void ParseQuery::addWhereItemForKey(Json const &dict, std::string key) {

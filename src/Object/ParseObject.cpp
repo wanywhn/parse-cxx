@@ -79,7 +79,7 @@ NS_PC_BEGIN
 
     void ParseObject::setObjectForKey(ParseGeoPoint *const &geoPoint,
                                       std::string const &key) {
-        Json value =geoPoint->toJson();
+        Json value = geoPoint->toJson();
         this->localData[key] = value;
     }
 
@@ -156,13 +156,7 @@ NS_PC_BEGIN
         return root;
     }
 
-    void ParseObject::saveInBackground() {
-        this->saveInBackgroundWithCallback([&](bool const &succeeded, PCError const &error) {
-            // do nothing
-        });
-    }
-
-    void ParseObject::saveInBackgroundWithCallback(BooleanResultCallback callback) {
+    pplx::task<PCError> ParseObject::saveInBackground() {
         spdlog::debug("debug\n");
         for (auto &kv : this->addedRelationData) {
             this->localData[kv.first] = this->generateRelationObjectsByArray(kv.second, true);
@@ -176,112 +170,101 @@ NS_PC_BEGIN
         this->removedRelationData.clear();
         if (this->hasValidObjectId()) {
             std::string sessionToken;
-            ParsePaasClient::sharedInstance()->
-                    putObject(this->myObjectPath(),
-                              this->localData,
-                              sessionToken, [&](Json const &root,
-                                                PCError const &error) {
-                        callback(error.domain.length() == 0, error);
+            return ParsePaasClient::sharedInstance()->
+                            putObject(this->myObjectPath(), this->localData, sessionToken)
+                    .then([](Json jvalue) {
+                        if (jvalue.is_null()) {
+                            spdlog::critical("Error parse null json");
+                        }
+                        try {
+                            //Json str = Json::parse(jvalue.serialize(), nullptr, false);
+                            return ParseErrorUtils::errorFromJSON(jvalue);
+                            //callback(str, error);
+                        } catch (std::invalid_argument &e) {
+                            spdlog::critical("Error with:{}", e.what());
+                        }
+                        return PCError{};
                     });
+
         } else {
-            ParsePaasClient::sharedInstance()->
-                    postObject(this->myObjectPath(),
-                               this->localData,
-                               [&](Json const root,
-                                                       PCError const &error) {
-                                                       if (error.domain.length() == 0) {
+            return ParsePaasClient::sharedInstance()->postObject(this->myObjectPath(),
+                                                                 this->localData, web::http::status_codes::Created)
+                    .then([this](Json jvalue) {
+                        if (jvalue.find("objectId") == jvalue.end()) {
+                            spdlog::error("return json did not have objectId:{}\r\n", jvalue);
+                        }
+                        this->objectId = jvalue["objectId"];
+                        this->createdAt = jvalue["createdAt"];
+                        if (jvalue.find("sessionToken") != jvalue.end()) {
+                            this->localData["sessionToken"] = jvalue["sessionToken"];
+                        }
+                        return PCError{};
+                    });
 
-                                                           this->objectId = root["objectId"];
-                                                           this->createdAt = root["createdAt"];
-                                                           if (root.find("sessionToken") != root.end()) {
-                                                               this->localData["sessionToken"] = root["sessionToken"];
-                                                           }
-
-                                                           callback(true, error);
-                                                       } else {
-                                                           callback(false, error);
-                                                       }
-                                                   });
         }
     }
 
-    void ParseObject::saveAllInBackground(std::vector<ParseObject *> objects) {
+    pplx::task<std::vector<PCError>> ParseObject::saveAllInBackgroundWithCallback(std::vector<ParseObject *> objects) {
+        std::vector<pplx::task<PCError>> ret;
+        ret.reserve(objects.size());
         for (auto &object : objects) {
-            object->saveInBackground();
+            ret.push_back(object->saveInBackground());
         }
+        return pplx::when_all(ret.begin(), ret.end());
+
     }
 
-    void ParseObject::saveAllInBackgroundWithCallback(std::vector<ParseObject *> objects,
-                                                      BooleanResultCallback callback) {
-        for (auto &object : objects) {
-            object->saveInBackgroundWithCallback(callback);
-        }
-    }
-
-    void ParseObject::fetch() {
+    pplx::task<PCError> ParseObject::fetch() {
         std::vector<std::string> keys;
-        this->fetchWithKeys(keys);
+        return this->fetchWithKeys(keys);
     }
 
-    void ParseObject::fetchWithKeys(std::vector<std::string> keys) {
-        if (this->hasValidObjectId()) {
-            Json parameters;
+    pplx::task<PCError> ParseObject::fetchWithKeys(std::vector<std::string> keys) {
+        if (!this->hasValidObjectId()) {
+            return {};
+        }
+        Json parameters;
 
-            if (!keys.empty()) {
-                std::string includeKeys;
-                for (auto &key:keys) {
-                    includeKeys.append(key);
-                    includeKeys.append(",");
-                }
-
-                parameters["include"] = includeKeys;
+        if (!keys.empty()) {
+            std::string includeKeys;
+            for (auto &key:keys) {
+                includeKeys.append(key);
+                includeKeys.append(",");
             }
 
-            ParsePaasClient::sharedInstance()->
-                    getObject(this->myObjectPath(),
-                              parameters,
-                              [&](Json const &root,
-                                  PCError const &error) {
-                                  if (error.domain.length() == 0) {
-                                      for (auto it = root.begin(); it != root.end(); ++it) {
-                                          std::string key = it.key();
-                                          if (key == "createdAt") {
-                                              this->createdAt = it.value();
-                                          } else if (key == "updatedAt") {
-                                              this->updatedAt = it.value();
-                                          }
-                                      }
-
-                                      this->localData = root;
-                                      this->localData.erase("objectId");
-                                      this->localData.erase("createdAt");
-                                      this->localData.erase("updatedAt");
-                                  }
-                              });
+            parameters["include"] = includeKeys;
         }
+
+        return ParsePaasClient::sharedInstance()->
+                        getObject(this->myObjectPath(),
+                                  parameters)
+                .then([this](Json root) {
+                    for (auto it = root.begin(); it != root.end(); ++it) {
+                        std::string key = it.key();
+                        if (key == "createdAt") {
+                            this->createdAt = it.value();
+                        } else if (key == "updatedAt") {
+                            this->updatedAt = it.value();
+                        }
+                    }
+                    // why
+                    this->localData = root;
+                    this->localData.erase("objectId");
+                    this->localData.erase("createdAt");
+                    this->localData.erase("updatedAt");
+                    //TODO return result
+                    return ParseErrorUtils::errorFromJSON(root);
+                });
     }
 
-    void ParseObject::deleteInBackground() {
-        this->deleteInBackgroundWithCallback([&](bool const &succeeded, PCError const &error) {
-//            if(succeeded){
-//                spdlog::get("console")->debug("delete successed");
-//            }else{
-//                spdlog::get("console")->error("delete in backgroud error");
-//            }
-            // do nothing
-        });
-    }
-
-    void ParseObject::deleteInBackgroundWithCallback(BooleanResultCallback callback) {
+    pplx::task<PCError> ParseObject::deleteInBackgroundWithCallback() {
         if (this->hasValidObjectId()) {
             Json parameters;
-            ParsePaasClient::sharedInstance()->
-                    deleteObject(this->myObjectPath(),
-                                 parameters,
-                                 [&](Json const &root,
-                                     PCError const &error) {
-                                     callback(error.domain.length() == 0, error);
-                                 });
+            return ParsePaasClient::sharedInstance()->deleteObject(this->myObjectPath(), parameters)
+                    .then([](Json jvalue) {
+                        return ParseErrorUtils::errorFromJSON(jvalue);
+                    });
+
         }
     }
 
@@ -291,9 +274,9 @@ NS_PC_BEGIN
 
     std::string ParseObject::myObjectPath() {
         if (this->hasValidObjectId()) {
-            return StringUtils::string_format("classes/%s/%s", this->className, this->objectId);
+            return StringUtils::string_format("/classes/%s/%s", this->className, this->objectId);
         } else {
-            return StringUtils::string_format("classes/%s", this->className);
+            return StringUtils::string_format("/classes/%s", this->className);
         }
     }
 

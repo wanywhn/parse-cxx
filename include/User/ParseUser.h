@@ -3,6 +3,7 @@
 #define INCLUDE_USER_PARSEUSER_H_
 
 #include <string>
+#include "Utils/ParseStringUtils.h"
 #include "Object/ParseObject.h"
 #include "Query/ParseQuery.h"
 #include "Utils/ParsePlatformMacros.h"
@@ -14,6 +15,15 @@ class ParseUser : public ParseObject {
 private:
   ParseUser();
 
+protected:
+
+virtual std::string myObjectPath() override{
+        if (this->hasValidObjectId()) {
+            return StringUtils::string_format("/users/%s", this->objectId);
+        } else {
+            return "/users";
+        }
+}
 public:
   /**
    * \~english The session token for the ParseUser. This is set by the server upon successful authentication.
@@ -77,13 +87,13 @@ public:
    * \~english release memory.
    *
    */
-  void release();
+  void release() override;
 
   /**
    * \~english Signs up the user. Make sure that password and username are set. This will also enforce that the username isn't already taken.
    *
    */
-  void signUp(BooleanResultCallback callback);
+  pplx::task<PCError> signUp();
 
   /**
    * \~english update user's password with callback

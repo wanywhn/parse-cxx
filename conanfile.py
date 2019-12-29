@@ -20,14 +20,15 @@ class ParsecxxConan(ConanFile):
         'jsonformoderncpp/3.6.1@vthiery/stable', \
         'spdlog/1.3.1@bincrafters/stable', \
         'cpprestsdk/2.10.13@bincrafters/stable', \
-        'Catch2/2.9.1@catchorg/stable',\
-        'boost_format/1.69.0@bincrafters/stable', \
-        'boost_system/1.69.0@bincrafters/stable', \
-        'boost_regex/1.69.0@bincrafters/stable', \
-        'boost_program_options/1.69.0@bincrafters/stable', \
-        'boost_filesystem/1.69.0@bincrafters/stable', \
-        'boost_thread/1.69.0@bincrafters/stable', \
-        'boost_date_time/1.69.0@bincrafters/stable',
+        'Catch2/2.9.1@catchorg/stable',
+        # 'boost_format/1.69.0@bincrafters/stable', \
+        # 'boost_system/1.69.0@bincrafters/stable', \
+        # 'boost_regex/1.69.0@bincrafters/stable', \
+        # 'boost_program_options/1.69.0@bincrafters/stable', \
+        # 'boost_filesystem/1.69.0@bincrafters/stable', \
+        # 'boost_thread/1.69.0@bincrafters/stable', \
+        # 'boost_date_time/1.69.0@bincrafters/stable',
+    # default_options ={"cpprestsdk:exclude_compression":True}
 
     def source(self):
         self.run("git clone https://github.com/conan-io/hello.git")

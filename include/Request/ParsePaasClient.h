@@ -59,8 +59,8 @@ private:
   ParsePaasClient();
   void updateHeaders(std::string const &content_type="application/json");
   void addHeaderMap(stringMap && headerMap);
-  void processResponse(const pplx::task<web::http::http_response>& response,
-                       const IdResultCallback& callback);
+  pplx::task<Json> processResponse(const pplx::task<web::http::http_response>& response,
+                       web::http::status_code);
 
 public:
   ~ParsePaasClient();
@@ -81,56 +81,58 @@ public:
                                 std::string const & path,
                                 map & map);
 
-  void getObject(std::string const & path,
+  pplx::task<Json> getObject(std::string const & path,
                  map const & parameters,
-                 IdResultCallback callback);
+                  web::http::status_code expectCode=web::http::status_codes::OK);
 
-  void getObject(std::string const & path,
+  pplx::task<Json> getObject(std::string const & path,
                  map const & parameters,
                  CachePolicy policy,
                  int maxCacheAge,
-                 IdResultCallback callback);
+                 web::http::status_code expectCode=web::http::status_codes::OK);
 
-  void putObject(std::string const & path,
+  pplx::task<Json> putObject(std::string const & path,
                  map const & parameters,
                  std::string const & sessionToken,
-                 IdResultCallback callback);
+                 web::http::status_code expectCode=web::http::status_codes::OK);
 
-  void postBatchObject(std::vector<map> const & parameterArray,
-                       VectorResultCallback callback);
+  pplx::task<Json> postBatchObject(std::vector<map> const & parameterArray,
+                 web::http::status_code expectCode=web::http::status_codes::OK);
 
-  void postBatchObject(std::vector<map> const & parameterArray,
+  pplx::task<Json> postBatchObject(std::vector<map> const & parameterArray,
+                   map const & headerMap,
+                   bool const & isEventually,
+             web::http::status_code expectCode=web::http::status_codes::OK);
+
+  pplx::task<Json> postBatchSaveObject(std::vector<map> const & parameterArray,
                        map const & headerMap,
                        bool const & isEventually,
-                       VectorResultCallback callback);
+             web::http::status_code expectCode=web::http::status_codes::OK);
 
-  void postBatchSaveObject(std::vector<map> const & parameterArray,
-                           map const & headerMap,
-                           bool const & isEventually,
-                           IdResultCallback callback);
+   pplx::task<Json> postObject(std::string const &path, map const &parameters,
+             web::http::status_code expectCode=web::http::status_codes::OK,
+                std::string const &content_type="application/json");
+ pplx::task<Json>  postFile(std::string const &path, const std::string &data,
+            std::string const &content_type,
+             web::http::status_code expectCode=web::http::status_codes::OK);
 
-  void postObject(std::string const &path, map const &parameters, IdResultCallback callback,
-                    std::string const &content_type="application/json");
-  void postFile(std::string const &path, const std::string &data, IdResultCallback callback,
-                std::string const &content_type);
+  pplx::task<Json> postObject(std::string const & path,
+              map const & parameters,
+              bool const & isEventually,
+              web::http::status_code expectCode=web::http::status_codes::OK);
 
-  void postObject(std::string const & path,
-                  map const & parameters,
-                  bool const & isEventually,
-                  IdResultCallback callback);
+  pplx::task<Json> deleteObject(std::string const & path,
+                map const & parameters,
+              web::http::status_code expectCode=web::http::status_codes::OK);
 
-  void deleteObject(std::string const & path,
-                    map const & parameters,
-                    IdResultCallback callback);
+  pplx::task<Json> deleteObject(std::string const & path,
+                map const & parameters,
+                bool const & isEventually,
+              web::http::status_code expectCode=web::http::status_codes::OK);
 
-  void deleteObject(std::string const & path,
-                    map const & parameters,
-                    bool const & isEventually,
-                    IdResultCallback callback);
-
-  void deleteObjects(std::vector<ParseObject> const & objects,
+  pplx::task<Json> deleteObjects(std::vector<ParseObject> const & objects,
                      bool const & isEventually,
-                     IdResultCallback callback);
+                  web::http::status_code expectCode=web::http::status_codes::OK);
 
   void cancelQuery(std::string const & path, map const & parameters);
 

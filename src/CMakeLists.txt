@@ -13,6 +13,7 @@ include(Request/CMakeLists.txt)
 include(User/CMakeLists.txt)
 include(Utils/CMakeLists.txt)
 
+add_definitions( -D_NO_ASYNCRTIMP )
 add_library(${LIB_NAME} STATIC
   ${ParseCloud_SRC}
   ${ParseCloud_ACL_SRC}
@@ -28,16 +29,20 @@ add_library(${LIB_NAME} STATIC
 target_include_directories(${LIB_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 
-target_link_libraries(${LIB_NAME} PUBLIC
+target_link_libraries(${LIB_NAME}
+PUBLIC
         CONAN_PKG::jsonformoderncpp
-        CONAN_PKG::spdlog
-        CONAN_PKG::Catch2
 
-        CONAN_PKG::boost_format
+        # CONAN_PKG::boost_format
 #        CONAN_PKG::boost_system
-        CONAN_PKG::boost_regex
-        CONAN_PKG::boost_program_options
+        CONAN_PKG::websocketpp
+        PRIVATE
+        CONAN_PKG::spdlog
         CONAN_PKG::cpprestsdk
+        # CONAN_PKG::OpenSSL
+        # CONAN_PKG::boost_asio
+        # CONAN_PKG::boost_regex
+        # CONAN_PKG::boost_program_options
   )
 set_target_properties(${LIB_NAME}
   PROPERTIES
