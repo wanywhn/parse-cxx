@@ -329,27 +329,20 @@ public:
    *
    * \~english \return an array of Objects that were found.
    */
-  std::vector<ParseObject*> findObjects();
+  pplx::task<std::vector<ParseObject *>> findObjects();
 
   /**
    * \~english Counts objects based on the constructed query.
    *
    * \~english \return the number of Objects that match the query, or -1 if there is an error.
    */
-  int countObjects();
+  pplx::task<std::pair<PCError, int>> countObjects();
 
-  /**
-   * \~english Counts objects asynchronously and calls the given block with the counts.
-   *
-   * \~english \param callback the callbck to execute. The callback should have the following argument sianature: (int const&, Error const&).
-   */
-  void countObjectsInBackgroundWithCallback(IntegerResultCallback callback);
-
-  /**
-   * \~english Set where of The Query
-   *
-   * \~english \param where
-   */
+    /**
+     * \~english Set where of The Query
+     *
+     * \~english \param where
+     */
   void setWhere(Json where);
 };
 

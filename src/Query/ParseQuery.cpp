@@ -285,13 +285,11 @@ NS_PC_BEGIN
         return object;
     }
 
-    std::vector<ParseObject *> ParseQuery::findObjects() {
-        std::vector<ParseObject *> objects;
-
+    pplx::task<std::vector<ParseObject *>> ParseQuery::findObjects() {
         std::string path = StringUtils::string_format("classes/%s", this->className);
         this->assembleParameters();
 
-        ParsePaasClient::sharedInstance()->
+        return ParsePaasClient::sharedInstance()->
                         getObject(path, this->parameters)
                 .then([this](Json root) {
                     std::vector<ParseObject *> objects;
@@ -318,34 +316,23 @@ NS_PC_BEGIN
 
                         objects.push_back(object);
                     }
+                    return objects;
                 });
 
-        return objects;
     }
 
-    int ParseQuery::countObjects() {
-        int count = 0;
-        this->countObjectsInBackgroundWithCallback([&](int const &result, PCError const &error) {
-            count = result;
-        });
-
-        return count;
-    }
-
-    void ParseQuery::countObjectsInBackgroundWithCallback(IntegerResultCallback callback) {
+    pplx::task<std::pair<PCError, int>> ParseQuery::countObjects() {
         std::string path = StringUtils::string_format("classes/%s", this->className);
         this->assembleParameters();
 
         this->parameters["limit"] = 0;
         this->parameters["count"] = 1;
 
-        ParsePaasClient::sharedInstance()->
-                        getObject(path, this->parameters)
+        return ParsePaasClient::sharedInstance()->getObject(path, this->parameters)
                 .then([](Json root) {
-                    //TODO FIXME no count
+                    //TODO FIXME no count,
                     int count = root["count"];
-
-
+                    return std::make_pair(ParseErrorUtils::errorFromJSON(root),count);
                 });
     }
 
