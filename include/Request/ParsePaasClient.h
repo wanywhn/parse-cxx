@@ -110,7 +110,7 @@ public:
              web::http::status_code expectCode=web::http::status_codes::OK);
 
    pplx::task<Json> postObject(std::string const &path, map const &parameters,
-             web::http::status_code expectCode=web::http::status_codes::OK,
+             web::http::status_code expectCode=web::http::status_codes::Created,
                 std::string const &content_type="application/json");
  pplx::task<Json>  postFile(std::string const &path, const std::string &data,
             std::string const &content_type,
