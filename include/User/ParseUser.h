@@ -102,9 +102,7 @@ public:
    * \~english \param newPassword new password
    * \~english \param callback The callback to be executed
    */
-  void updatePasswordWithCallback(std::string oldPassword,
-                                  std::string newPassword,
-                                  IdResultCallback callback);
+  pplx::task<PCError> updatePasswordWithCallback(std::string oldPassword, std::string newPassword);
 
   /**
    * \~english Makes a request to login a user with specified credentials. Returns an instance
@@ -131,7 +129,7 @@ public:
    *
    * \~english \param email
    */
-  static void requestPasswordResetForEmail(std::string email, StringResultCallback callback);
+  static pplx::task<PCError> requestPasswordResetForEmail(std::string email);
 
   /**
    * \~english Creates a query for ParseUser objects.

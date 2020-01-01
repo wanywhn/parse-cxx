@@ -191,7 +191,7 @@ NS_PC_BEGIN
                                                                  this->localData, web::http::status_codes::Created)
                     .then([this](Json jvalue) {
                         if (jvalue.find("objectId") == jvalue.end()) {
-                            spdlog::error("return json did not have objectId:{}\r\n", jvalue);
+                            spdlog::error("return json did not have objectId:{}\r\n", jvalue.dump());
                         }
                         this->objectId = jvalue["objectId"];
                         this->createdAt = jvalue["createdAt"];
@@ -265,6 +265,9 @@ NS_PC_BEGIN
                         return ParseErrorUtils::errorFromJSON(jvalue);
                     });
 
+        } else {
+            //TODO return error
+            return {};
         }
     }
 

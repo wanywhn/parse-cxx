@@ -30,7 +30,7 @@ add_definitions( -DAPPID="abc" -DAPPKEY="abc" -DSERVER_URL="http://144.202.116.9
             CONAN_PKG::Catch2
             PRIVATE
         CONAN_PKG::cpprestsdk
-        CONAN_PKG::websocketpp
+#        CONAN_PKG::websocketpp
         CONAN_PKG::jsonformoderncpp
             parsecloud )
 

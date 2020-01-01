@@ -14,6 +14,7 @@ class ParsecxxConan(ConanFile):
     default_options = {
         # "boost:shared": False,
         # "shared": False,
+        "cpprestsdk:exclude_websockets":True,
     }
     generators = {"cmake"}
     requires = \

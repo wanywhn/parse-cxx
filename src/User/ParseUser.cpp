@@ -66,9 +66,7 @@ NS_PC_BEGIN
         }
     }
 
-    void ParseUser::updatePasswordWithCallback(std::string oldPassword,
-                                               std::string newPassword,
-                                               IdResultCallback callback) {
+    pplx::task<PCError> ParseUser::updatePasswordWithCallback(std::string oldPassword, std::string newPassword) {
         if (this->isAuthenticated() &&
             oldPassword.length() > 0 &&
             newPassword.length() > 0) {
@@ -76,23 +74,23 @@ NS_PC_BEGIN
             Json parameters;
             parameters["password"] = newPassword;
 
-            ParsePaasClient::sharedInstance()->
+            return ParsePaasClient::sharedInstance()->
                     putObject(path,
                               parameters,
                               this->sessionToken)
                               .then([](Json root){
-
+                                  return ParseErrorUtils::errorFromJSON(root);
 
                               });
         } else {
             if (!this->isAuthenticated()) {
                 Json root;
                 PCError error(kErrorDomain, SessionMissing);
-                callback(root, error);
+                return pplx::task_from_result(error);
             } else if (!(oldPassword.length() > 0 && newPassword.length() > 0)) {
                 Json root;
                 PCError error(kErrorDomain, PasswordMissing);
-                callback(root, error);
+                return pplx::task_from_result(error);
             }
         }
     }
@@ -134,7 +132,7 @@ NS_PC_BEGIN
         ParsePaasClient::sharedInstance()->logOut();
     }
 
-    void ParseUser::requestPasswordResetForEmail(std::string email, StringResultCallback callback) {
+    pplx::task<PCError> ParseUser::requestPasswordResetForEmail(std::string email) {
         std::string path = "requestPasswordReset";
         Json parameters;
         parameters["email"] = email;
@@ -143,6 +141,7 @@ NS_PC_BEGIN
                         postObject(path,
                                    parameters, web::http::status_codes::OK)
                 .then([](Json root) {
+                    return ParseErrorUtils::errorFromJSON(root);
                 });
     }
 

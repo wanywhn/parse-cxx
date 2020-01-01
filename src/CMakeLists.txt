@@ -35,7 +35,7 @@ PUBLIC
 
         # CONAN_PKG::boost_format
 #        CONAN_PKG::boost_system
-        CONAN_PKG::websocketpp
+#        CONAN_PKG::websocketpp
         PRIVATE
         CONAN_PKG::spdlog
         CONAN_PKG::cpprestsdk
